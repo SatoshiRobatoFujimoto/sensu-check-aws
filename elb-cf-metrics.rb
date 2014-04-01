@@ -13,38 +13,38 @@ require 'rubygems' if RUBY_VERSION < '1.9.0'
 require 'sensu-plugin/metric/cli'
 require 'aws-sdk'
 
+# AllELBMetrics
 class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
-
   option :scheme,
-    description: 'Metric naming scheme, text to prepend to metric',
-    short: '-s SCHEME',
-    long: '--scheme SCHEME',
-    default: 'ELB'
+         description: 'Metric naming scheme, text to prepend to metric',
+         short: '-s SCHEME',
+         long: '--scheme SCHEME',
+         default: 'ELB'
 
   option :region,
-    short: '-r REGION',
-    long: '--region REGION',
-    description: 'AWS Region (such as ap-northeast-1).',
-    default: 'ap-northeast-1'
+         short: '-r REGION',
+         long: '--region REGION',
+         description: 'AWS Region (such as ap-northeast-1).',
+         default: 'ap-northeast-1'
 
   option :elb_name,
-    description: 'ELB name to retrieve metrics from CloudWatch',
-    short: '-n ELB_NAME',
-    long: '--name ELB_NAME'
+         description: 'ELB name to retrieve metrics from CloudWatch',
+         short: '-n ELB_NAME',
+         long: '--name ELB_NAME'
 
   option :fetch_age,
-    description: 'How long ago to fetch metrics for',
-    short: '-f AGE',
-    long: '--fetch_age',
-    default: 60,
-    :proc => proc { |a| a.to_i }
+         description: 'How long ago to fetch metrics for',
+         short: '-f AGE',
+         long: '--fetch_age',
+         default: 60,
+         proc: proc { |a| a.to_i }
 
   option :duration,
-    description: 'Duration to collect metrics data',
-    short: '-d DURATION',
-    long: '--duration',
-    default: 60,
-    :proc => proc { |a| a.to_i }
+         description: 'Duration to collect metrics data',
+         short: '-d DURATION',
+         long: '--duration',
+         default: 60,
+         proc: proc { |a| a.to_i }
 
   def run
     if config[:scheme] == ''
@@ -54,7 +54,8 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
     end
 
     # please confirm the link
-    # http://docs.aws.amazon.com/ElasticLoadBalancing/latest/DeveloperGuide/US_MonitoringLoadBalancerWithCW.html
+    # http://docs.aws.amazon.com/ElasticLoadBalancing/latest/
+    # DeveloperGuide/US_MonitoringLoadBalancerWithCW.html
     statistic_type = {
       'HealthyHostCount' => 'Average',
       'UnHealthyHostCount' => 'Average',
@@ -75,11 +76,11 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
     start_time = end_time - config[:duration]
 
     begin
-      AWS.config({
+      AWS.config(
         cloud_watch_endpoint: "monitoring.#{config[:region]}.amazonaws.com"
-      })
+      )
 
-      statistic_type.each { |metric_name, statistics_type|
+      statistic_type.each do |metric_name, statistics_type|
         metric = AWS::CloudWatch::Metric.new(
           'AWS/ELB',
           metric_name,
@@ -95,9 +96,11 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
         )
         last_stats = stats.sort_by { |stat| stat[:timestamp] }.last
         unless last_stats.nil?
-          output graphite_root + ".#{config[:elb_name]}.#{metric_name}", last_stats[statistics_type.downcase.to_sym].to_f, last_stats[:timestamp].to_i
+          output graphite_root + ".#{config[:elb_name]}.#{metric_name}",
+                 last_stats[statistics_type.downcase.to_sym].to_f,
+                 last_stats[:timestamp].to_i
         end
-      }
+      end
     rescue Exception => e
       puts "Error: exception: #{e}"
       critical
