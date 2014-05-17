@@ -43,9 +43,15 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
       graphite_root = config[:scheme]
     end
 
-    conf = JSON.parse(File.read(File.dirname(__FILE__)+"/billing-metrics.json"))
-
+    conf = {} 
+    begin
+      conf = JSON.parse(File.read(File.dirname(__FILE__)+"/billing-metrics.json"))
+    rescue
+      conf["billing"] = []
+    end
     statistic_type = conf["billing"]
+    statistic_type.unshift("all");
+
     end_time = Time.now - config[:fetch_age]
     start_time = end_time - config[:duration]
 
@@ -53,21 +59,23 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
       AWS.config(
         cloud_watch_endpoint: "monitoring.us-east-1.amazonaws.com"
       )
+      dimension = {
+        dimensions: [
+        {
+          name: 'Currency',
+          value: 'USD'
+        }
+        ]
+      }
 
       statistic_type.each do |metric_name|
+        if metric_name != "all" then
+          dimension[:dimensions].push({name: 'ServiceName', value: metric_name})
+        end
         metric = AWS::CloudWatch::Metric.new(
           'AWS/Billing',
           'EstimatedCharges',
-          dimensions: [
-          {
-            name: 'Currency',
-            value: 'USD'
-          },
-          {
-            name: 'ServiceName',
-            value: metric_name 
-          }
-        ]
+          dimension
         )
         stats = metric.statistics(
           start_time: start_time,
