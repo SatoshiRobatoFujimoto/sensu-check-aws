@@ -1,0 +1,3 @@
+{
+  "billing":["AmazonEC2", "AmazonRDS", "AmazonS3", "AmazonGlacier", "AmazonRedshift", "AmazonDynamoDB"]
+}
