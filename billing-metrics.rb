@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-# Retrieve All ELB metrics from CloudWatch
+# Retrieve Billing metrics from CloudWatch
 # ===
 #
 # Copyright 2014 Ryutaro YOSHIBA http://www.ryuzee.com/
@@ -14,8 +14,8 @@ require 'sensu-plugin/metric/cli'
 require 'aws-sdk'
 require 'json'
 
-# AllELBMetrics
-class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
+# BillingMetrics
+class BillingMetrics < Sensu::Plugin::Metric::CLI::Graphite
   option :scheme,
          description: 'Metric naming scheme, text to prepend to metric',
          short: '-s SCHEME',
@@ -38,39 +38,38 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
 
   def run
     if config[:scheme] == ''
-      graphite_root = "billing"
+      graphite_root = 'billing'
     else
       graphite_root = config[:scheme]
     end
 
-    conf = {} 
+    conf = {}
     begin
-      conf = JSON.parse(File.read(File.dirname(__FILE__)+"/billing-metrics.json"))
+      filename = File.dirname(__FILE__) + '/billing-metrics.json'
+      conf = JSON.parse(File.read(filename))
     rescue
-      conf["billing"] = []
+      conf['billing'] = []
     end
-    statistic_type = conf["billing"]
-    statistic_type.unshift("all");
+    statistic_type = conf['billing']
+    statistic_type.unshift('all')
 
     end_time = Time.now - config[:fetch_age]
     start_time = end_time - config[:duration]
 
     begin
       AWS.config(
-        cloud_watch_endpoint: "monitoring.us-east-1.amazonaws.com"
+        cloud_watch_endpoint: 'monitoring.us-east-1.amazonaws.com'
       )
       dimension = {
-        dimensions: [
-        {
+        dimensions: [{
           name: 'Currency',
           value: 'USD'
-        }
-        ]
+        }]
       }
 
       statistic_type.each do |metric_name|
-        if metric_name != "all" then
-          dimension[:dimensions].push({name: 'ServiceName', value: metric_name})
+        if metric_name != 'all'
+          dimension[:dimensions].push(name: 'ServiceName', value: metric_name)
         end
         metric = AWS::CloudWatch::Metric.new(
           'AWS/Billing',
@@ -80,7 +79,7 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
         stats = metric.statistics(
           start_time: start_time,
           end_time: end_time,
-          statistics: ["Average"]
+          statistics: ['Average']
         )
         last_stats = stats.sort_by { |stat| stat[:timestamp] }.last
         unless last_stats.nil?
@@ -96,3 +95,5 @@ class AllELBMetrics < Sensu::Plugin::Metric::CLI::Graphite
     ok
   end
 end
+
+# ft=ruby encoding=utf-8
